@@ -1,5 +1,3 @@
-Absolutely! Here's a comprehensive README for your Hourly Salary Calculator, covering its features, how to use it, and key technical details.
-
 Hourly Salary Calculator
 This is a simple, intuitive web-based tool designed to help individuals calculate their monthly salary based on an hourly rate, track their daily work hours, and generate professional salary reports. It includes support for weekend multipliers, multiple currencies, and convenient PDF/JPG export options.
 
@@ -55,5 +53,3 @@ html2canvas: https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canva
 Font Awesome: https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css (for icons)
 ✍️ Credits
 Made by Nishikant Xalxo
-
-Feel free to enhance this README further if there are specific sections you'd like to expand on or if you have any additional details to include!
