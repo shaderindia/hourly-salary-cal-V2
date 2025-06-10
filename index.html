@@ -33,13 +33,20 @@
         /* Company Watermark */
         .watermark {
             position: absolute;
-            font-size: 1.5rem; /* Adjust as needed */
+            font-size: 2.5rem; /* Increased font size */
             font-weight: bold;
             color: rgba(0, 0, 0, 0.08); /* Light grey, very transparent */
             pointer-events: none; /* Allows clicks to pass through */
             z-index: 0; /* Ensures it's behind content */
             width: 90%; /* Span most of the width */
             text-align: center;
+            display: flex; /* Added flexbox for icon alignment */
+            align-items: center; /* Vertically center icon */
+            justify-content: center; /* Horizontally center icon */
+        }
+
+        .watermark i {
+            margin-right: 0.5em; /* Add spacing between icon and text */
         }
 
         #watermark-top {
@@ -104,7 +111,7 @@
                 padding: 0.25rem; /* Smaller cell padding */
             }
             .watermark {
-                font-size: 1rem; /* Smaller watermark on mobile */
+                font-size: 1.5rem; /* Smaller watermark on mobile */
             }
         }
     </style>
@@ -413,7 +420,7 @@
 
                 return `
                     <div id="report-preview" class="bg-white p-8 font-sans text-black relative">
-                        <div id="watermark-top" class="watermark">${companyName || 'Your Company Name'}</div>
+                        <div id="watermark-top" class="watermark"><i class="fas fa-microchip"></i>${companyName || 'Your Company Name'}</div>
                         <div class="text-center text-lg font-bold mb-4 z-10 relative">
                             ${companyName || 'Your Company Name'}
                         </div>
@@ -489,7 +496,7 @@
                                 <p><strong>Date of Salary Received:</strong> ___________________________________</p>
                             </div>
                         </div>
-                        <div id="watermark-bottom" class="watermark">${companyName || 'Your Company Name'}</div>
+                         <div id="watermark-bottom" class="watermark"><i class="fas fa-microchip"></i>${companyName || 'Your Company Name'}</div>
                     </div>
                 `;
             }
