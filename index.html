@@ -23,7 +23,6 @@
         /* Styles for the A4 preview */
         #report-preview {
             width: 210mm; /* A4 width */
-            /* height: 297mm; Remove fixed height to allow content to dictate height */
             box-shadow: 0 0 10px rgba(0,0,0,0.1);
             transform-origin: top center;
             transition: transform 0.3s ease;
@@ -43,6 +42,7 @@
         }
         ::-webkit-scrollbar-thumb:hover {
             background: #555;
+            border-radius: 4px;
         }
 
         /* Input number arrows removal */
@@ -61,7 +61,7 @@
     <header class="py-3 bg-white shadow-sm fixed top-0 left-0 right-0 z-20">
         <div class="container mx-auto flex justify-center items-center text-sm text-gray-600">
             <span>Made by Nishikant Xalxo</span>
-            <a href="https://www.instagram.com/nishix_vamp" target="_blank" class="ml-2 text-pink-500 hover:text-pink-600 transition-colors">
+            <a href="https://www.instagram.com/nishi_vamp" target="_blank" class="ml-2 text-pink-500 hover:text-pink-600 transition-colors">
                 <i class="fab fa-instagram fa-lg"></i>
             </a>
         </div>
@@ -72,7 +72,11 @@
         <h1 id="user-greeting" class="text-3xl font-bold text-center mb-8 text-gray-700"></h1>
 
         <div class="max-w-6xl mx-auto bg-white p-6 rounded-2xl shadow-lg">
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6 pb-6 border-b border-gray-200">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6 pb-6 border-b border-gray-200">
+                <div>
+                    <label for="company-name" class="block text-sm font-medium text-gray-700 mb-1">Company Name</label>
+                    <input type="text" id="company-name" placeholder="e.g., Tech Solutions Inc." class="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                </div>
                 <div>
                     <label for="month-picker" class="block text-sm font-medium text-gray-700 mb-1">Select Month & Year</label>
                     <input type="month" id="month-picker" class="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
@@ -132,8 +136,9 @@
     <div id="name-modal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50">
         <div class="bg-white p-8 rounded-xl shadow-2xl text-center w-11/12 max-w-md">
             <h2 class="text-2xl font-bold mb-4">Welcome!</h2>
-            <p class="text-gray-600 mb-6">Please enter your full name to get started.</p>
+            <p class="text-gray-600 mb-6">Please enter your full name and company name to get started.</p>
             <input type="text" id="name-input" placeholder="e.g., Jane Doe" class="w-full p-3 border border-gray-300 rounded-lg mb-4 text-center focus:ring-2 focus:ring-blue-500">
+            <input type="text" id="modal-company-name-input" placeholder="e.g., Tech Solutions Inc." class="w-full p-3 border border-gray-300 rounded-lg mb-4 text-center focus:ring-2 focus:ring-blue-500">
             <button id="start-button" class="bg-blue-600 text-white font-bold py-3 px-8 rounded-lg hover:bg-blue-700 transition-transform transform hover:scale-105 w-full">Continue</button>
         </div>
     </div>
@@ -159,8 +164,10 @@
             // --- DOM Elements ---
             const nameModal = document.getElementById('name-modal');
             const nameInput = document.getElementById('name-input');
+            const modalCompanyNameInput = document.getElementById('modal-company-name-input'); // New
             const startButton = document.getElementById('start-button');
             const userGreeting = document.getElementById('user-greeting');
+            const companyNameInput = document.getElementById('company-name'); // New
             const monthPicker = document.getElementById('month-picker');
             const hourlyRateInput = document.getElementById('hourly-rate');
             const saturdayMultiplierSelect = document.getElementById('saturday-multiplier');
@@ -178,6 +185,7 @@
 
             // --- App State ---
             let fullName = '';
+            let companyName = ''; // New
             let hourlyRate = 0;
             let daysData = [];
             const currencyRates = { INR: 1, USD: 83.5, EUR: 90.2, GBP: 106.1 };
@@ -186,6 +194,8 @@
             // --- Event Listeners ---
             startButton.addEventListener('click', startApp);
             nameInput.addEventListener('keyup', (e) => { if (e.key === 'Enter') startApp(); });
+            modalCompanyNameInput.addEventListener('keyup', (e) => { if (e.key === 'Enter') startApp(); }); // New
+            companyNameInput.addEventListener('input', () => { companyName = companyNameInput.value.trim(); }); // New
             monthPicker.addEventListener('change', generateDaysGrid);
             hourlyRateInput.addEventListener('input', updateAndCalculate);
             saturdayMultiplierSelect.addEventListener('change', updateAndCalculate);
@@ -199,11 +209,13 @@
             // --- Functions ---
             function startApp() {
                 fullName = nameInput.value.trim();
-                if (fullName) {
+                companyName = modalCompanyNameInput.value.trim(); // Get company name from modal
+                if (fullName && companyName) {
                     userGreeting.textContent = `Welcome, ${fullName}!`;
+                    companyNameInput.value = companyName; // Set company name in main input
                     nameModal.style.display = 'none';
                 } else {
-                    alert('Please enter your name.');
+                    alert('Please enter both your name and company name.');
                 }
             }
 
@@ -297,55 +309,58 @@
                 
                 let totalSalaryINR = 0;
                 let totalHours = 0;
+                let daysWorkedCount = 0; // New
+                let daysNotWorkedCount = 0; // New
                 const satMultiplier = parseFloat(saturdayMultiplierSelect.value);
                 const sunMultiplier = parseFloat(sundayMultiplierSelect.value);
 
-                // Filter out days with 0 hours for the report
-                const workedDays = daysData.filter(d => d.hours > 0);
+                const daysInMonth = new Date(year, month, 0).getDate(); // Get total days in month
                 
-                workedDays.forEach(day => {
+                let column1RowsHtml = '';
+                let column2RowsHtml = '';
+
+                // Iterate through all days to get worked/not worked counts
+                daysData.forEach(day => {
                     let multiplier = 1;
                     if (day.dayOfWeek === 6) multiplier = satMultiplier;
                     if (day.dayOfWeek === 0) multiplier = sunMultiplier;
                     const dayPay = day.hours * hourlyRate * multiplier;
                     totalSalaryINR += dayPay;
                     totalHours += day.hours;
+
+                    if (day.hours > 0) {
+                        daysWorkedCount++;
+                    } else {
+                        daysNotWorkedCount++;
+                    }
+
+                    const rowHtml = `
+                        <tr class="border-b border-gray-200">
+                            <td class="p-1 text-left">${day.date.toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })}</td>
+                            <td class="p-1 text-left">${day.date.toLocaleString('default', { weekday: 'short' })}</td>
+                            <td class="p-1 text-center">${day.hours}</td>
+                            <td class="p-1 text-center">₹${hourlyRate.toFixed(2)}</td>
+                            <td class="p-1 text-center">${multiplier}x</td>
+                            <td class="p-1 text-right">₹${dayPay.toFixed(2)}</td>
+                        </tr>
+                    `;
+
+                    if (day.id <= 15) { // First 15 days
+                        column1RowsHtml += rowHtml;
+                    } else { // Next days
+                        column2RowsHtml += rowHtml;
+                    }
                 });
                 
                 const finalSalary = totalSalaryINR / currencyRates[selectedCurrency];
 
-                let column1RowsHtml = '';
-                let column2RowsHtml = '';
-
-                // Split days into two columns. Approximately half each.
-                const splitPoint = Math.ceil(workedDays.length / 2);
-
-                workedDays.forEach((day, index) => {
-                    let multiplier = 1;
-                    if (day.dayOfWeek === 6) multiplier = satMultiplier;
-                    if (day.dayOfWeek === 0) multiplier = sunMultiplier;
-                    const dayPay = day.hours * hourlyRate * multiplier;
-
-                    const rowHtml = `
-                        <tr class="border-b border-gray-200">
-                            <td class="p-1.5 text-left">${day.date.toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })}</td>
-                            <td class="p-1.5 text-left">${day.date.toLocaleString('default', { weekday: 'short' })}</td>
-                            <td class="p-1.5 text-center">${day.hours}</td>
-                            <td class="p-1.5 text-center">₹${hourlyRate.toFixed(2)}</td>
-                            <td class="p-1.5 text-center">${multiplier}x</td>
-                            <td class="p-1.5 text-right">₹${dayPay.toFixed(2)}</td>
-                        </tr>
-                    `;
-                    if (index < splitPoint) {
-                        column1RowsHtml += rowHtml;
-                    } else {
-                        column2RowsHtml += rowHtml;
-                    }
-                });
-
                 return `
-                    <div id="report-preview" class="bg-white p-8 font-sans text-black">
-                        <div class="flex justify-between items-start border-b-2 border-black pb-4 mb-6 text-sm">
+                    <div id="report-preview" class="bg-white p-8 font-sans text-black relative">
+                        <div class="text-center text-lg font-bold mb-4">
+                            ${companyName || 'Your Company Name'}
+                        </div>
+
+                        <div class="flex justify-between items-start border-b-2 border-black pb-4 mb-4 text-sm">
                             <div class="w-1/3">
                                 <p><strong>Employee:</strong> ${fullName}</p>
                                 <p><strong>Base Rate:</strong> ₹${hourlyRate.toFixed(2)} / hour</p>
@@ -360,8 +375,10 @@
                             </div>
                         </div>
 
-                        <div class="flex justify-between gap-6 mb-6">
-                            <div class="w-1/2">
+                        <div class="flex justify-between gap-4 mb-6 relative">
+                            <div class="absolute left-1/2 top-0 bottom-0 w-px bg-black transform -translate-x-1/2"></div>
+
+                            <div class="w-1/2 pr-2"> <h3 class="font-semibold text-sm mb-2 text-center">Day 1 - Day 15</h3>
                                 <table class="w-full text-xs">
                                     <thead>
                                         <tr class="border-b border-gray-300 bg-gray-100">
@@ -369,14 +386,14 @@
                                             <th class="p-1.5 text-left">Day</th>
                                             <th class="p-1.5 text-center">Hours</th>
                                             <th class="p-1.5 text-center">Rate</th>
-                                            <th class="p-1.5 text-center">Multiplier</th>
+                                            <th class="p-1.5 text-center">Mult.</th>
                                             <th class="p-1.5 text-right">Pay (INR)</th>
                                         </tr>
                                     </thead>
                                     <tbody>${column1RowsHtml}</tbody>
                                 </table>
                             </div>
-                            <div class="w-1/2">
+                            <div class="w-1/2 pl-2"> <h3 class="font-semibold text-sm mb-2 text-center">Day 16 - ${daysInMonth}</h3>
                                 <table class="w-full text-xs">
                                     <thead>
                                         <tr class="border-b border-gray-300 bg-gray-100">
@@ -384,7 +401,7 @@
                                             <th class="p-1.5 text-left">Day</th>
                                             <th class="p-1.5 text-center">Hours</th>
                                             <th class="p-1.5 text-center">Rate</th>
-                                            <th class="p-1.5 text-center">Multiplier</th>
+                                            <th class="p-1.5 text-center">Mult.</th>
                                             <th class="p-1.5 text-right">Pay (INR)</th>
                                         </tr>
                                     </thead>
@@ -394,7 +411,12 @@
                         </div>
                         
                         <div class="border-t-2 border-gray-200 pt-4 mt-auto">
-                            <div class="flex justify-end">
+                            <div class="flex justify-between items-end mb-6">
+                                <div class="w-1/2 text-sm">
+                                    <p class="mb-1"><strong>Total Days in Month:</strong> ${daysInMonth}</p>
+                                    <p class="mb-1"><strong>Days Worked:</strong> ${daysWorkedCount}</p>
+                                    <p><strong>Days Not Worked:</strong> ${daysNotWorkedCount}</p>
+                                </div>
                                 <div class="w-1/2">
                                     <div class="flex justify-between p-4 bg-black text-white rounded-lg text-xl">
                                         <span class="font-bold">Grand Total (${selectedCurrency}):</span>
@@ -402,14 +424,19 @@
                                     </div>
                                 </div>
                             </div>
+
+                            <div class="mt-8 text-sm">
+                                <p class="mb-2"><strong>Signature:</strong> ___________________________________</p>
+                                <p><strong>Date of Salary Received:</strong> ${new Date().toLocaleDateString('en-IN')}</p>
+                            </div>
                         </div>
                     </div>
                 `;
             }
 
             function showPreview() {
-                if (!fullName || !monthPicker.value || hourlyRate <= 0) {
-                    alert("Please fill in your name, select a month, and set an hourly rate before previewing.");
+                if (!fullName || !companyName || !monthPicker.value || hourlyRate <= 0) {
+                    alert("Please fill in your name, company name, select a month, and set an hourly rate before previewing.");
                     return;
                 }
                 const reportContainer = document.getElementById('report-container');
@@ -424,27 +451,26 @@
                 // Temporarily modify styles for full-content capture
                 const originalHeight = reportElement.style.height;
                 const originalOverflow = reportElement.style.overflow;
-                // Set max-width to A4 width in mm for consistent scaling for html2canvas
                 reportElement.style.maxWidth = '210mm'; 
-                reportElement.style.height = 'auto'; // Allow content to determine height
-                reportElement.style.overflow = 'visible'; // Ensure all content is visible
+                reportElement.style.height = 'auto'; 
+                reportElement.style.overflow = 'visible'; 
 
                 const canvas = await html2canvas(reportElement, { 
                     scale: 3, 
                     useCORS: true,
-                    windowWidth: reportElement.scrollWidth, // Capture full width
-                    windowHeight: reportElement.scrollHeight // Capture full height
+                    windowWidth: reportElement.scrollWidth, 
+                    windowHeight: reportElement.scrollHeight 
                 });
                 
                 // Restore original styles after capture
                 reportElement.style.height = originalHeight;
                 reportElement.style.overflow = originalOverflow;
-                reportElement.style.maxWidth = ''; // Reset max-width
+                reportElement.style.maxWidth = ''; 
                 
                 if (format === 'jpg') {
                     const imgData = canvas.toDataURL('image/jpeg', 1.0);
                     const link = document.createElement('a');
-                    link.download = `Salary_Report_${fullName.replace(' ', '_')}_${monthPicker.value}.jpg`;
+                    link.download = `Salary_Report_${fullName.replace(' ', '_')}_${companyName.replace(' ', '_')}_${monthPicker.value}.jpg`;
                     link.href = imgData;
                     link.click();
                 } else if (format === 'pdf') {
@@ -458,25 +484,23 @@
                     const canvasWidth = canvas.width;
                     const canvasHeight = canvas.height;
                     
-                    // Calculate scale factor to fit canvas width to PDF width, maintaining aspect ratio
                     const scaleFactor = pdfWidth / canvasWidth;
                     const imgHeight = canvasHeight * scaleFactor;
                     
                     let heightLeft = imgHeight;
                     let position = 0;
 
-                    // Add image with scaling
                     pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, imgHeight);
                     heightLeft -= pdfHeight;
 
                     while (heightLeft > 0) {
-                        position = -(imgHeight - heightLeft); // Adjust position for subsequent pages
+                        position = - (imgHeight - heightLeft); // Adjust position for subsequent pages
                         pdf.addPage();
                         pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, imgHeight);
                         heightLeft -= pdfHeight;
                     }
                     
-                    pdf.save(`Salary_Report_${fullName.replace(' ', '_')}_${monthPicker.value}.pdf`);
+                    pdf.save(`Salary_Report_${fullName.replace(' ', '_')}_${companyName.replace(' ', '_')}_${monthPicker.value}.pdf`);
                 }
             }
         });
