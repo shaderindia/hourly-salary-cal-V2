@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hourly Salary Calculator</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+    <style>
+        /* Custom styles */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f0f2f5;
+        }
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+        /* Styles for the A4 preview */
+        #report-preview {
+            width: 210mm; /* A4 width */
+            /* height: 297mm; Remove fixed height to allow content to dictate height */
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            transform-origin: top center;
+            transition: transform 0.3s ease;
+            overflow-y: auto; /* Add scroll for long content in preview */
+        }
+        
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+
+        /* Input number arrows removal */
+        input[type=number]::-webkit-inner-spin-button,
+        input[type=number]::-webkit-outer-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        input[type=number] {
+            -moz-appearance: textfield;
+        }
+    </style>
+</head>
+<body class="text-gray-800">
+
+    <header class="py-3 bg-white shadow-sm fixed top-0 left-0 right-0 z-20">
+        <div class="container mx-auto flex justify-center items-center text-sm text-gray-600">
+            <span>Made by Nishikant Xalxo</span>
+            <a href="https://www.instagram.com/nishi_vamp" target="_blank" class="ml-2 text-pink-500 hover:text-pink-600 transition-colors">
+                <i class="fab fa-instagram fa-lg"></i>
+            </a>
+        </div>
+    </header>
+
+    <div id="app-container" class="container mx-auto p-4 pt-20">
+
+        <h1 id="user-greeting" class="text-3xl font-bold text-center mb-8 text-gray-700"></h1>
+
+        <div class="max-w-6xl mx-auto bg-white p-6 rounded-2xl shadow-lg">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6 pb-6 border-b border-gray-200">
+                <div>
+                    <label for="month-picker" class="block text-sm font-medium text-gray-700 mb-1">Select Month & Year</label>
+                    <input type="month" id="month-picker" class="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                </div>
+                <div>
+                    <label for="hourly-rate" class="block text-sm font-medium text-gray-700 mb-1">Rate per Hour (₹)</label>
+                    <input type="number" id="hourly-rate" placeholder="e.g., 250" class="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Weekend Multiplier</label>
+                    <div class="flex space-x-2">
+                        <select id="saturday-multiplier" class="w-1/2 p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                            <option value="1">Sat (1x)</option>
+                            <option value="1.25">Sat (1.25x)</option>
+                            <option value="1.5" selected>Sat (1.5x)</option>
+                            <option value="2">Sat (2x)</option>
+                        </select>
+                        <select id="sunday-multiplier" class="w-1/2 p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                            <option value="1">Sun (1x)</option>
+                            <option value="1.25">Sun (1.25x)</option>
+                            <option value="1.5">Sun (1.5x)</option>
+                            <option value="2" selected>Sun (2x)</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <div id="days-container" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 mb-6">
+                   <p id="days-placeholder" class="text-gray-500 col-span-full text-center py-8">Select a month to see the days log.</p>
+            </div>
+            
+            <div class="bg-gray-50 p-6 rounded-2xl mt-4">
+                <h2 class="text-xl font-semibold text-center mb-4">Live Salary Calculation</h2>
+                <div class="flex flex-col md:flex-row items-center justify-center gap-4">
+                    <div class="flex items-center">
+                        <select id="currency-selector" class="p-3 border border-gray-300 rounded-l-lg bg-white focus:outline-none">
+                            <option value="INR">₹ (INR)</option>
+                            <option value="USD">$ (USD)</option>
+                            <option value="EUR">€ (EUR)</option>
+                            <option value="GBP">£ (GBP)</option>
+                        </select>
+                        <div id="total-salary" class="text-3xl font-bold bg-blue-500 text-white p-3 rounded-r-lg min-w-[200px] text-center">
+                            0.00
+                        </div>
+                    </div>
+                    <div class="flex space-x-3">
+                           <button id="preview-button" class="bg-green-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-green-600 transition-all shadow-md flex items-center gap-2">
+                               <i class="fas fa-eye"></i> Preview & Download
+                           </button>
+                    </div>
+                </div>
+                   <p id="summary-text" class="text-center text-gray-600 mt-3 text-sm"></p>
+            </div>
+        </div>
+    </div>
+    
+    <div id="name-modal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50">
+        <div class="bg-white p-8 rounded-xl shadow-2xl text-center w-11/12 max-w-md">
+            <h2 class="text-2xl font-bold mb-4">Welcome!</h2>
+            <p class="text-gray-600 mb-6">Please enter your full name to get started.</p>
+            <input type="text" id="name-input" placeholder="e.g., Jane Doe" class="w-full p-3 border border-gray-300 rounded-lg mb-4 text-center focus:ring-2 focus:ring-blue-500">
+            <button id="start-button" class="bg-blue-600 text-white font-bold py-3 px-8 rounded-lg hover:bg-blue-700 transition-transform transform hover:scale-105 w-full">Continue</button>
+        </div>
+    </div>
+    
+    <div id="preview-modal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex-col items-center justify-start z-40 hidden overflow-y-auto p-4">
+        <div class="bg-white p-4 rounded-xl shadow-2xl text-right mb-4 mt-16 sticky top-4 z-50 w-full max-w-4xl mx-auto">
+              <div class="flex justify-between items-center">
+                <p class="text-lg font-semibold text-gray-800">Download Preview</p>
+                <div>
+                    <button id="download-jpg" class="bg-yellow-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-yellow-600 transition-all shadow-md mr-2 flex items-center gap-2"><i class="fas fa-file-image"></i> JPG</button>
+                    <button id="download-pdf" class="bg-red-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-600 transition-all shadow-md mr-2 flex items-center gap-2"><i class="fas fa-file-pdf"></i> PDF</button>
+                    <button id="close-preview" class="bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded-lg hover:bg-gray-400 transition-all"><i class="fas fa-times"></i></button>
+                </div>
+            </div>
+        </div>
+        <div id="report-container" class="w-full flex justify-center">
+              </div>
+    </div>
+
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // --- DOM Elements ---
+            const nameModal = document.getElementById('name-modal');
+            const nameInput = document.getElementById('name-input');
+            const startButton = document.getElementById('start-button');
+            const userGreeting = document.getElementById('user-greeting');
+            const monthPicker = document.getElementById('month-picker');
+            const hourlyRateInput = document.getElementById('hourly-rate');
+            const saturdayMultiplierSelect = document.getElementById('saturday-multiplier');
+            const sundayMultiplierSelect = document.getElementById('sunday-multiplier');
+            const daysContainer = document.getElementById('days-container');
+            const daysPlaceholder = document.getElementById('days-placeholder');
+            const totalSalaryDiv = document.getElementById('total-salary');
+            const currencySelector = document.getElementById('currency-selector');
+            const summaryText = document.getElementById('summary-text');
+            const previewButton = document.getElementById('preview-button');
+            const previewModal = document.getElementById('preview-modal');
+            const closePreviewButton = document.getElementById('close-preview');
+            const downloadPdfButton = document.getElementById('download-pdf');
+            const downloadJpgButton = document.getElementById('download-jpg');
+
+            // --- App State ---
+            let fullName = '';
+            let hourlyRate = 0;
+            let daysData = [];
+            const currencyRates = { INR: 1, USD: 83.5, EUR: 90.2, GBP: 106.1 };
+            const currencySymbols = { INR: '₹', USD: '$', EUR: '€', GBP: '£' };
+
+            // --- Event Listeners ---
+            startButton.addEventListener('click', startApp);
+            nameInput.addEventListener('keyup', (e) => { if (e.key === 'Enter') startApp(); });
+            monthPicker.addEventListener('change', generateDaysGrid);
+            hourlyRateInput.addEventListener('input', updateAndCalculate);
+            saturdayMultiplierSelect.addEventListener('change', updateAndCalculate);
+            sundayMultiplierSelect.addEventListener('change', updateAndCalculate);
+            currencySelector.addEventListener('change', updateAndCalculate);
+            previewButton.addEventListener('click', showPreview);
+            closePreviewButton.addEventListener('click', () => previewModal.style.display = 'none');
+            downloadPdfButton.addEventListener('click', () => handleDownload('pdf'));
+            downloadJpgButton.addEventListener('click', () => handleDownload('jpg'));
+
+            // --- Functions ---
+            function startApp() {
+                fullName = nameInput.value.trim();
+                if (fullName) {
+                    userGreeting.textContent = `Welcome, ${fullName}!`;
+                    nameModal.style.display = 'none';
+                } else {
+                    alert('Please enter your name.');
+                }
+            }
+
+            function generateDaysGrid() {
+                const [year, month] = monthPicker.value.split('-').map(Number);
+                if (!year || !month) return;
+
+                daysContainer.innerHTML = '';
+                daysData = [];
+                const daysInMonth = new Date(year, month, 0).getDate();
+
+                for (let i = 1; i <= daysInMonth; i++) {
+                    const date = new Date(year, month - 1, i);
+                    const dayOfWeek = date.getDay(); // 0 = Sunday, 6 = Saturday
+                    const dayInfo = {
+                        id: i,
+                        date: date,
+                        dayOfWeek: dayOfWeek,
+                        hours: 0,
+                    };
+                    daysData.push(dayInfo);
+                    
+                    const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+                    const dayCard = document.createElement('div');
+                    dayCard.className = `p-3 rounded-lg border ${isWeekend ? 'bg-blue-50 border-blue-200' : 'bg-gray-50 border-gray-200'}`;
+
+                    let optionsHtml = '';
+                    for (let h = 0; h <= 12; h++) {
+                        optionsHtml += `<option value="${h}">${h} hr</option>`;
+                    }
+
+                    dayCard.innerHTML = `
+                        <p class="font-semibold text-sm">${i} ${date.toLocaleString('default', { month: 'short' })}</p>
+                        <p class="text-xs text-gray-500 mb-2">${date.toLocaleString('default', { weekday: 'long' })}</p>
+                        <select data-day-id="${i}" class="day-hours-select w-full p-1.5 border border-gray-300 rounded-md text-sm">
+                            ${optionsHtml}
+                        </select>
+                    `;
+                    daysContainer.appendChild(dayCard);
+                }
+                daysPlaceholder.style.display = 'none';
+
+                document.querySelectorAll('.day-hours-select').forEach(select => {
+                    select.addEventListener('change', (e) => {
+                        const dayId = parseInt(e.target.dataset.dayId);
+                        const hours = parseInt(e.target.value);
+                        const day = daysData.find(d => d.id === dayId);
+                        if (day) {
+                            day.hours = hours;
+                        }
+                        calculateSalary();
+                    });
+                });
+                calculateSalary();
+            }
+            
+            function updateAndCalculate() {
+                hourlyRate = parseFloat(hourlyRateInput.value) || 0;
+                calculateSalary();
+            }
+
+            function calculateSalary() {
+                hourlyRate = parseFloat(hourlyRateInput.value) || 0;
+                let totalSalaryINR = 0;
+                let totalHours = 0;
+                const satMultiplier = parseFloat(saturdayMultiplierSelect.value);
+                const sunMultiplier = parseFloat(sundayMultiplierSelect.value);
+
+                daysData.forEach(day => {
+                    let multiplier = 1;
+                    if (day.dayOfWeek === 6) multiplier = satMultiplier; // Saturday
+                    if (day.dayOfWeek === 0) multiplier = sunMultiplier; // Sunday
+                    
+                    totalSalaryINR += day.hours * hourlyRate * multiplier;
+                    totalHours += day.hours;
+                });
+
+                const selectedCurrency = currencySelector.value;
+                const convertedSalary = totalSalaryINR / currencyRates[selectedCurrency];
+                
+                totalSalaryDiv.textContent = `${convertedSalary.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+                summaryText.textContent = `Total Hours: ${totalHours} | Base Rate: ₹${hourlyRate}/hr`;
+            }
+
+            function generateReportHTML() {
+                const [year, month] = monthPicker.value.split('-').map(Number);
+                const monthName = new Date(year, month - 1).toLocaleString('default', { month: 'long' });
+                
+                const selectedCurrency = currencySelector.value;
+                const symbol = currencySymbols[selectedCurrency];
+                
+                let totalSalaryINR = 0;
+                let totalHours = 0;
+                const satMultiplier = parseFloat(saturdayMultiplierSelect.value);
+                const sunMultiplier = parseFloat(sundayMultiplierSelect.value);
+
+                // Filter out days with 0 hours for the report
+                const workedDays = daysData.filter(d => d.hours > 0);
+                
+                workedDays.forEach(day => {
+                    let multiplier = 1;
+                    if (day.dayOfWeek === 6) multiplier = satMultiplier;
+                    if (day.dayOfWeek === 0) multiplier = sunMultiplier;
+                    const dayPay = day.hours * hourlyRate * multiplier;
+                    totalSalaryINR += dayPay;
+                    totalHours += day.hours;
+                });
+                
+                const finalSalary = totalSalaryINR / currencyRates[selectedCurrency];
+
+                let column1RowsHtml = '';
+                let column2RowsHtml = '';
+
+                // Split days into two columns. Approximately half each.
+                const splitPoint = Math.ceil(workedDays.length / 2);
+
+                workedDays.forEach((day, index) => {
+                    let multiplier = 1;
+                    if (day.dayOfWeek === 6) multiplier = satMultiplier;
+                    if (day.dayOfWeek === 0) multiplier = sunMultiplier;
+                    const dayPay = day.hours * hourlyRate * multiplier;
+
+                    const rowHtml = `
+                        <tr class="border-b border-gray-200">
+                            <td class="p-1.5 text-left">${day.date.toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })}</td>
+                            <td class="p-1.5 text-left">${day.date.toLocaleString('default', { weekday: 'short' })}</td>
+                            <td class="p-1.5 text-center">${day.hours}</td>
+                            <td class="p-1.5 text-center">₹${hourlyRate.toFixed(2)}</td>
+                            <td class="p-1.5 text-center">${multiplier}x</td>
+                            <td class="p-1.5 text-right">₹${dayPay.toFixed(2)}</td>
+                        </tr>
+                    `;
+                    if (index < splitPoint) {
+                        column1RowsHtml += rowHtml;
+                    } else {
+                        column2RowsHtml += rowHtml;
+                    }
+                });
+
+                return `
+                    <div id="report-preview" class="bg-white p-8 font-sans text-black">
+                        <div class="flex justify-between items-start border-b-2 border-black pb-4 mb-6 text-sm">
+                            <div class="w-1/3">
+                                <p><strong>Employee:</strong> ${fullName}</p>
+                                <p><strong>Base Rate:</strong> ₹${hourlyRate.toFixed(2)} / hour</p>
+                            </div>
+                            <div class="w-1/3 text-center">
+                                <h1 class="text-2xl font-bold">Salary Report</h1>
+                                <p class="text-lg">${monthName} ${year}</p>
+                            </div>
+                            <div class="w-1/3 text-right">
+                                <p><strong>Total Hours:</strong> ${totalHours}</p>
+                                <p><strong>Grand Total (INR):</strong> ₹${totalSalaryINR.toFixed(2)}</p>
+                            </div>
+                        </div>
+
+                        <div class="flex justify-between gap-6 mb-6">
+                            <div class="w-1/2">
+                                <table class="w-full text-xs">
+                                    <thead>
+                                        <tr class="border-b border-gray-300 bg-gray-100">
+                                            <th class="p-1.5 text-left">Date</th>
+                                            <th class="p-1.5 text-left">Day</th>
+                                            <th class="p-1.5 text-center">Hours</th>
+                                            <th class="p-1.5 text-center">Rate</th>
+                                            <th class="p-1.5 text-center">Multiplier</th>
+                                            <th class="p-1.5 text-right">Pay (INR)</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>${column1RowsHtml}</tbody>
+                                </table>
+                            </div>
+                            <div class="w-1/2">
+                                <table class="w-full text-xs">
+                                    <thead>
+                                        <tr class="border-b border-gray-300 bg-gray-100">
+                                            <th class="p-1.5 text-left">Date</th>
+                                            <th class="p-1.5 text-left">Day</th>
+                                            <th class="p-1.5 text-center">Hours</th>
+                                            <th class="p-1.5 text-center">Rate</th>
+                                            <th class="p-1.5 text-center">Multiplier</th>
+                                            <th class="p-1.5 text-right">Pay (INR)</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>${column2RowsHtml}</tbody>
+                                </table>
+                            </div>
+                        </div>
+                        
+                        <div class="border-t-2 border-gray-200 pt-4 mt-auto">
+                            <div class="flex justify-end">
+                                <div class="w-1/2">
+                                    <div class="flex justify-between p-4 bg-black text-white rounded-lg text-xl">
+                                        <span class="font-bold">Grand Total (${selectedCurrency}):</span>
+                                        <span class="font-bold">${symbol}${finalSalary.toFixed(2)}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            function showPreview() {
+                if (!fullName || !monthPicker.value || hourlyRate <= 0) {
+                    alert("Please fill in your name, select a month, and set an hourly rate before previewing.");
+                    return;
+                }
+                const reportContainer = document.getElementById('report-container');
+                reportContainer.innerHTML = generateReportHTML();
+                previewModal.style.display = 'flex';
+            }
+
+            async function handleDownload(format) {
+                const reportElement = document.getElementById('report-preview');
+                if (!reportElement) return;
+                
+                // Temporarily modify styles for full-content capture
+                const originalHeight = reportElement.style.height;
+                const originalOverflow = reportElement.style.overflow;
+                // Set max-width to A4 width in mm for consistent scaling for html2canvas
+                reportElement.style.maxWidth = '210mm'; 
+                reportElement.style.height = 'auto'; // Allow content to determine height
+                reportElement.style.overflow = 'visible'; // Ensure all content is visible
+
+                const canvas = await html2canvas(reportElement, { 
+                    scale: 3, 
+                    useCORS: true,
+                    windowWidth: reportElement.scrollWidth, // Capture full width
+                    windowHeight: reportElement.scrollHeight // Capture full height
+                });
+                
+                // Restore original styles after capture
+                reportElement.style.height = originalHeight;
+                reportElement.style.overflow = originalOverflow;
+                reportElement.style.maxWidth = ''; // Reset max-width
+                
+                if (format === 'jpg') {
+                    const imgData = canvas.toDataURL('image/jpeg', 1.0);
+                    const link = document.createElement('a');
+                    link.download = `Salary_Report_${fullName.replace(' ', '_')}_${monthPicker.value}.jpg`;
+                    link.href = imgData;
+                    link.click();
+                } else if (format === 'pdf') {
+                    const { jsPDF } = window.jspdf;
+                    const imgData = canvas.toDataURL('image/png');
+                    
+                    const pdf = new jsPDF('p', 'mm', 'a4');
+                    const pdfWidth = pdf.internal.pageSize.getWidth();
+                    const pdfHeight = pdf.internal.pageSize.getHeight();
+                    
+                    const canvasWidth = canvas.width;
+                    const canvasHeight = canvas.height;
+                    
+                    // Calculate scale factor to fit canvas width to PDF width, maintaining aspect ratio
+                    const scaleFactor = pdfWidth / canvasWidth;
+                    const imgHeight = canvasHeight * scaleFactor;
+                    
+                    let heightLeft = imgHeight;
+                    let position = 0;
+
+                    // Add image with scaling
+                    pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, imgHeight);
+                    heightLeft -= pdfHeight;
+
+                    while (heightLeft > 0) {
+                        position = -(imgHeight - heightLeft); // Adjust position for subsequent pages
+                        pdf.addPage();
+                        pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, imgHeight);
+                        heightLeft -= pdfHeight;
+                    }
+                    
+                    pdf.save(`Salary_Report_${fullName.replace(' ', '_')}_${monthPicker.value}.pdf`);
+                }
+            }
+        });
+    </script>
+</body>
+</html>
