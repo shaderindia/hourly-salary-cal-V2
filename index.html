@@ -213,6 +213,11 @@
 
 
     <script>
+        // IMPORTANT NOTE FOR USERS:
+        // This is a self-contained HTML file. You can save this file (e.g., as 'salary_calculator.html')
+        // and open it directly in any web browser. All the code (HTML, CSS, JavaScript) is in one file.
+        // You can also open this file in a text editor to view or modify the code directly.
+
         document.addEventListener('DOMContentLoaded', () => {
             // --- DOM Elements ---
             const nameModal = document.getElementById('name-modal');
@@ -429,7 +434,9 @@
                         </div>
 
                         <div class="flex justify-between gap-4 mb-6 relative z-10">
-                            <div class="absolute left-1/2 top-0 bottom-0 w-px bg-black transform -translate-x-1/2 hidden md:block"></div> <div class="w-full md:w-1/2 md:pr-2">
+                            <div class="absolute left-1/2 top-0 bottom-0 w-px bg-black transform -translate-x-1/2 hidden md:block"></div>
+
+                            <div class="w-full md:w-1/2 md:pr-2">
                                 <h3 class="font-semibold text-sm mb-2 text-center">Day 1 - Day 15</h3>
                                 <table class="w-full text-xs">
                                     <thead>
@@ -508,15 +515,11 @@
                 reportElement.style.height = 'auto'; 
                 reportElement.style.overflow = 'visible'; 
 
-                // For `html2canvas` to capture the watermarks, they need to be part of the rendered content.
-                // Their `z-index` and `position` are already set in CSS.
-
                 const canvas = await html2canvas(reportElement, { 
                     scale: 3, 
                     useCORS: true,
                     windowWidth: reportElement.scrollWidth, 
                     windowHeight: reportElement.scrollHeight,
-                    // Fix for scrollbar on iOS/Safari in preview affecting capture if not perfect
                     scrollY: -window.scrollY, 
                     scrollX: -window.scrollX 
                 });
